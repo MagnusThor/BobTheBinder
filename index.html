@@ -1,0 +1,226 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>BobTheBinderJS</title>
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet" />
+
+    <style>
+        /*@import url("http://fonts.googleapis.com/css?family=Lato");
+        body {
+            font-family: "Lato";
+            font-size: 14px;
+        }*/
+
+        .embed-responsive {
+            margin-top: 1em;
+        }
+
+        .breaker {
+            margin-top: 1em;
+            border-top: 1px solid #dadada;
+            margin-bottom: 1em;
+        }
+    </style>
+</head>
+<body>
+
+
+    <div class="container-fluid">
+
+        <div class="row">
+            <div class="col-xs-12">
+                &nbsp;
+            </div>
+        </div>
+
+        <div class="row">
+            
+          
+            <article class="col-xs-12  col-sm-9">
+
+                <div class="jumbotron">
+                    <h1 class="page-header">
+                        BobTheBinderJS
+                        <small>The basics</small>
+                    </h1>
+
+                    <div>
+                        Yet another MVVM framework - Bob The Binder is tiny JavaScript framework for Model-View-View-Model that mainly is designed for real time applications.
+                    </div>
+
+                </div>
+
+                <div class="row">
+                    <div class="col-xs-12">
+
+                        <h2>Introduction</h2>
+                        <p>
+                            Bob is not super-heroic. Bob helps you construct web-applications in an intuitive way. It's not awesome
+                            , it just reduces the list of things you have to worry about.  Bob is designed to deal with models, views
+                            and DOM manipulation primary in real-time scenarios.  
+
+                        </p>
+                      
+                        <div class="row">
+                            <div class="col-xs-12 col-sm-6">
+                                <h4>Data-binding</h4>
+                                Declarative data-binding using Bob is a intuitive way of keeping the view and model syncronized.
+                                This is awesome because it minimizes DOM manipulation from the list of things you have to worry about.
+                                It doesnt matter if the model or the view changes, Bob makes sure it works both ways!
+
+
+                            </div>
+
+                            <div class="col-xs-12 col-sm-6">
+                                <h4>Native JavaScript</h4>
+                                Unlike many other frameworks, there is no need to inherit from roprietary types in order to wrap the model in accessors methods.
+                                Bob expects plain vanilla JavaScript objects. This makes your code easy to maintain,reuse, and attach or deattach from Bob
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+
+                </div>
+
+                <hr />
+
+                <div class="row">
+                    <div class="col-xs-12 col-sm-6">
+                        <h4>
+                            Use this URL for dev/testing
+                        </h4>
+                        <input type="text" class="form-control" value="//rawgit.com/MagnusThor/BobTheBinder/master/src/bob.0.1.js" />
+
+                    </div>
+
+                    <div class="col-xs-12 col-sm-6">
+                        <h4>Use this for production</h4>
+                        <input type="text" class="form-control" value="//cdn.rawgit.com/MagnusThor/BobTheBinder/master/src/bob.0.1.js    " />
+
+                    </div>
+
+                </div>
+
+                
+                
+                <div class="row">
+                    <div class="col-xs-12">
+                        
+                        <h2>Getting started<small>&nbsp;simple data-binding</small></h2>
+                        <p>
+                           TBD
+                        </p>
+                    </div>
+
+                </div>
+                
+
+                <div class="row">
+                    <div class="col-xs-12">
+                        <h3>Example 1</h3>
+                        <p>
+                            This example shows how to bind the UI to the model using the <code>text</code> and <code>value</code> binders.
+                        </p>
+                        <div class="embed-responsive embed-responsive-16by9">
+                            <iframe class="embed-responsive-item" src="//jsfiddle.net/MagnusThor/43y7fq7e/embedded/result,js,html" allowfullscreen="allowfullscreen" frameborder="0"></iframe>
+
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-xs-12">
+                        <h3>Example 2</h3>
+
+                        <p>
+                            This example shows how to bind to the model using <code>text</code>, <code>value</code> and <code>css</code> binders. This examples uses a computed (function) css binding.
+                            The function is used to switch css class depending on the age property.
+                        </p>
+
+                        <div class="embed-responsive embed-responsive-16by9">
+                            <iframe class="embed-responsive-item" src="//jsfiddle.net/MagnusThor/phLrmthz/2/embedded/result,js,html,css" allowfullscreen="allowfullscreen" frameborder="0"></iframe>
+
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-xs-12">
+                        <h3>Example 3</h3>
+                        <p>
+                            This example introduces the <code>repeater</code> binder. The repeater let's you iterate over collections of objects.
+                        </p>
+                        <div class="embed-responsive embed-responsive-16by9">
+                            <iframe class="embed-responsive-item" src="//jsfiddle.net/MagnusThor/n6pz72fb/embedded/result,js,html" allowfullscreen="allowfullscreen" frameborder="0"></iframe>
+
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-xs-12">
+                        <h3>
+                            Example 4
+                        </h3>
+                        <p>
+                            This example uses the <code>repeater</code> to iterate over items created as well as <code>value</code>, <code>text</code> and <code>click</code> is used to achieve the functionality shown below.
+                        </p>
+
+
+                        <div class="embed-responsive embed-responsive-16by9">
+
+                            <iframe class="embed-responsive-item" src="//jsfiddle.net/MagnusThor/m26en8Lo/embedded/result,js,html" allowfullscreen="allowfullscreen" frameborder="0"></iframe>
+
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-xs-12">
+                        <h3>Example 5</h3>
+
+                        <div>
+                            This example is based in example 5 above. the difference is that there a binding
+                            <code>checkbox</code> binding used to proivde
+                            the model with 1-n skilles.
+                            The purpose is to show how to establish a value collection 'value' binding.
+                        </div>
+
+
+                        <div class="embed-responsive embed-responsive-16by9">
+                            <iframe class="embed-responsive-item" src="//jsfiddle.net/MagnusThor/4coe302x/embedded/result,js,html" allowfullscreen="allowfullscreen" frameborder="0"></iframe>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-xs-12">
+                        <h3>Example 6</h3>
+
+                        <p>
+                            TBD
+                        </p>
+
+                        <div class="embed-responsive embed-responsive-16by9">
+                            <iframe class="embed-responsive-item" src="//jsfiddle.net/MagnusThor/jrognc8x/embedded/result,js,html" allowfullscreen="allowfullscreen" frameborder="0"></iframe>
+                        </div>
+
+
+                    </div>
+
+                </div>
+            </article>
+            
+            <nav class="col-xs-12 col-sm-3">
+                &nbsp;
+            </nav>
+
+        </div>
+
+
+    </div>
+
+
+
+</body>
+</html>
