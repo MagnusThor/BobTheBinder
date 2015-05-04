@@ -1,4 +1,4 @@
-#BobJS version 0.0.1
+#BobJS version 0.2
 
 Yet another MVVM framework - Bob The Binder is a tiny JavaScript framework for Model-View-View-Model that mainly is designed for real time applications. Awesome or super - heroic ?  No, it just reduces the list of things you have to worry about.
 
