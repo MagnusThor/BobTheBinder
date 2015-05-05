@@ -44,14 +44,14 @@ Bob.serializeForm = function (form) {
     return data;
 };
 Bob.binders = {
-    registerBinder: function (name, binder) {
-        if(this.hasOwnProperty(name))
+    registerBinder: function(name, binder) {
+        if (this.hasOwnProperty(name))
             this[name] = binder;
         return this;
     },
-    hide: function (node, onchange) {
+    hide: function(node, onchange) {
         return {
-            updateProperty: function (value) {
+            updateProperty: function(value) {
                 if (value) {
                     node.style.display = "";
                 } else {
@@ -60,22 +60,21 @@ Bob.binders = {
             }
         }
     },
-    css: function (node) {
+    css: function(node) {
         var previous;
         return {
-            updateProperty: function (newValue) {
-              
+            updateProperty: function(newValue) {
+
                 if (typeof (newValue) === "function") {
                     newValue = newValue();
-                }
-               ;
+                };
                 if (!newValue) return;
                 if (previous) {
-                    previous.split(",").forEach(function (c) {
+                    previous.split(",").forEach(function(c) {
                         node.classList.remove(c);
                     });
                 } else {
-                    newValue.split(",").forEach(function (c) {
+                    newValue.split(",").forEach(function(c) {
                         node.classList.remove(c);
                     });
                 }
@@ -84,41 +83,39 @@ Bob.binders = {
             }
         }
     },
-    value: function (node, onchange) {
-        node.addEventListener('keyup', function () {
+    value: function(node, onchange) {
+        node.addEventListener('keyup', function() {
             onchange(node.value);
         });
         return {
-            updateProperty: function (value) {
+            updateProperty: function(value) {
                 if (value !== node.value) {
                     node.value = value;
                 }
             }
         };
     },
-    count: function (node) {
+    count: function(node) {
         return {
-            updateProperty: function (value) {
-                    node.textContent = String(value).length;
+            updateProperty: function(value) {
+                node.textContent = String(value).length;
             }
         };
     },
-    html: function (node) {
+    html: function(node) {
         return {
-            updateProperty: function (value) {
+            updateProperty: function(value) {
                 node.htmlText = value;
             }
         };
     },
-
     href: function(node) {
         return {
-            updateProperty: function (value) {
+            updateProperty: function(value) {
                 node.setAttribute("href", value);
             }
         };
     },
-
     domId: function(node) {
         return {
             updateProperty: function(value) {
@@ -126,38 +123,52 @@ Bob.binders = {
             }
         };
     },
-
-    dataset: function (node) {
+    input: function(node) {
         return {
-            updateProperty: function (value) {
-                node.dataset = value;
+            updateProperty: function(value) {
+                var args = arguments;
+
+                var listener = function(evt) {
+
+                    args[0].apply(args[0](), [JSON.stringify(args[2])]);
+                };
+
+                node.addEventListener("input", listener);
+
+
             }
         };
     },
-
-    text: function (node) {
+    dataset: function(node) {
         return {
-            updateProperty: function (text) {
+            updateProperty: function(value) {
+                node.dataset[value] = value;
+            }
+        };
+    },
+    text: function(node) {
+        return {
+            updateProperty: function(text) {
                 node.textContent = text;
             }
         };
     },
     selectchange: function(node, onchange, onadd, onremove) {
         var obj;
-    
-       
+
+
         return {
             updateProperty: function() {
-               var args = arguments;
-               obj = args[5];
-               
-               var listener = function (e) {
-                   var options = e.target.querySelectorAll("option");
-                   for (var i = 0; i < options.length; i++) {
-                       if (!options[i].selected) 
-                           onremove(obj[i]);
-                      
-                   }
+                var args = arguments;
+                obj = args[5];
+
+                var listener = function(e) {
+                    var options = e.target.querySelectorAll("option");
+                    for (var i = 0; i < options.length; i++) {
+                        if (!options[i].selected)
+                            onremove(obj[i]);
+
+                    }
                     for (var i = 0; i < options.length; i++) {
                         if (options[i].selected) {
                             onadd(obj[i]);
@@ -168,18 +179,17 @@ Bob.binders = {
             }
         }
     },
- 
-    select: function (node) {
-     
+    select: function(node) {
+
         return {
-            updateProperty: function () {
+            updateProperty: function() {
                 var args = arguments;
                 if (Array.isArray(args[0])) {
                     var values = args[0];
-                    var match = values.findIndex(function (a) {
+                    var match = values.findIndex(function(a) {
                         return JSON.stringify(a) == JSON.stringify(args[3]);
                     });
-                    if (match >-1) node.selected = true;
+                    if (match > -1) node.selected = true;
                 } else {
                     var value = args[0];
                     if (args[3]) {
@@ -197,29 +207,28 @@ Bob.binders = {
             }
         }
     },
-    checkchange: function (node, onchange,onadd,onremove) {
+    checkchange: function(node, onchange, onadd, onremove) {
         var previous;
         var obj;
-        var isBool ;
+        var isBool;
         return {
-            updateProperty: function () {
+            updateProperty: function() {
                 var args = arguments;
                 obj = args[3];
 
                 if (!isBool) isBool = typeof(args[0]) === "boolean";
 
-              
-                var listener = function (e) {
+
+                var listener = function(e) {
                     if (isBool) {
-                     
+
                         onchange(node.checked);
                     } else {
-                      
+
                         if (node.checked) {
                             onadd(obj);
                         } else onremove(obj);
-                    }
-                  ;
+                    };
                 }
                 if (previous) {
                     node.removeEventListener("click", previous);
@@ -229,13 +238,13 @@ Bob.binders = {
             }
         }
     },
-    checked: function (node, onchange, object) {
+    checked: function(node, onchange, object) {
         return {
-            updateProperty: function () {
+            updateProperty: function() {
                 var args = arguments;
-             
+
                 if (!Array.isArray(args[0])) {
-                   
+
                     node.checked = args[0];
                 } else {
                     throw "Not yet implemented";
@@ -243,15 +252,23 @@ Bob.binders = {
             }
         }
     },
-    click: function (node) {
+    validate: function (node) {
+        var previous;
+        var pattern = node.dataset.pattern;
+        return {
+            updateProperty: function (v) {
+            }
+        }
+    },
+    click: function(node) {
         var previous;
         var data;
-     
+
         return {
-            updateProperty: function (fn) {
+            updateProperty: function(fn) {
                 if (!data) data = this;
-              
-                var listener = function (e) {
+
+                var listener = function(e) {
                     fn.apply(data, [e]);
                 };
                 if (previous) {
@@ -262,7 +279,11 @@ Bob.binders = {
             }
         };
     },
+   
 };
+
+
+
 
 
 Bob.Notifier = (function () {
@@ -275,30 +296,54 @@ Bob.Notifier = (function () {
                 return p.name == mutator;
             });
             if (exists.length == 0)
-                n = {
-                    name: mutator,
-                    fn: fn,
-                    ts: new Date()
-                };
+                n = new Bob.Dispatcher(mutator, fn);
             self.notifiers.push(n);
             if (cb) {
                 cb.apply(n, [n]);
             }
-            return this;
+            return n;
 
         }
+
         this.off = function (mutator, cb) {
             var exists = self.notifiers.findBy(function (p) {
                 return p.name == mutator;
             });
-
+            return this;
         };
+
     };
+    return ctor;
+})();
+
+Bob.Dispatcher = (function () {
+  
+    var ctor = function (name, fn) {
+      
+        this.name = name;
+        this.fn = fn;
+        this.ts = new Date();
+       
+    }
+    ctor.prototype.add = function(fn) {
+        this.$add = fn;
+        return this;
+    };
+    ctor.prototype.update = function (fn) {
+        this.$update = fn;
+        return this;
+    };
+    ctor.prototype.delete = function (fn) {
+        this.$delete = fn;
+        return this;
+    };
+
     return ctor;
 })();
 
 
 Bob.apply = function (binders) {
+    if (!binders) binders = Bob.binders;
     var $root;
     var notifier = new Bob.Notifier();
     function findObservable(obj, path, parent) {
@@ -393,7 +438,10 @@ Bob.apply = function (binders) {
             return;
         }
 
-        var binder = binders[binderName](node, updateValue,addValue,removeValue,object);
+
+      
+        var binder = binders[binderName](node, updateValue, addValue, removeValue, object);
+
         // todo: refactor
         var r = propertyName.split(".").pop();
         r = r.replace("(", "").replace(")", "");
@@ -415,7 +463,6 @@ Bob.apply = function (binders) {
         var observer = function (changes) {
            
             var changed = changes.some(function (change) {
-                
                 return change.name === propertyName.split(".").pop();
             });
 
@@ -534,6 +581,7 @@ Bob.apply = function (binders) {
 
      
         var observer = function (changes) {
+
          
             changes.forEach(function (change) {
                 var index = parseInt(change.name, 10), child;
@@ -546,6 +594,7 @@ Bob.apply = function (binders) {
                 } else if (change.type === 'delete') {
                     bindings.pop().unobserve();
                     child = parent.children[index];
+                 
                     child.parentNode.removeChild(child);
                 }
             });
@@ -569,7 +618,7 @@ Bob.apply = function (binders) {
     function bindModel(container, object,p) {
 
 
-      
+        if (typeof (container) === "string") container = document.querySelector(container);
 
         if (notifier) {
             var nfs = notifier.notifiers.map(function (n) {
@@ -578,19 +627,25 @@ Bob.apply = function (binders) {
                 }).length === 0) {
                     var no = findObservable(object, n.name);
                     Object.observe(no, function (changes) {
-                        changes.forEach(function (change) {
-                            n.ts = new Date();
-                            n.fn.apply(n, [change]);
-                        });
 
+                        var change = changes[0];
+                      //  changes.forEach(function (change) {
+                            var index = parseInt(change.name, 10);
+                            var args = isNaN(index) ? change.object : change.object[index];
+                            if (!args) args = change.object;
+                            n.ts = new Date();
+                            n.type = change.type;
+                            if (n.hasOwnProperty("$" + change.type))
+                                n["$" + change.type].apply(no,[args,change.name,change.type,change.oldValue]);
+                            if (n.fn)
+                                n.fn.apply(n, [args, change.name, change.type, change.oldValue]);
+                      //  });
                     });
                     registredNotifiers.push(n.name);
                 };
                 return n.name;
             });
-        }
-
-       
+        };
 
         if (!$root) $root = object;
 
@@ -660,6 +715,7 @@ Bob.apply = function (binders) {
 };
 
 
+// Array extenders //
 Array.prototype.intersect = function(array) {
     var result = [];
 
@@ -732,7 +788,9 @@ Array.prototype.findIndex = function (pre) {
     return -1;
 };
 Array.prototype.remove = function (index) {
+   
     this.splice(index, 1);
+   
     return this.length;
 };
 Array.prototype.clone = function() {
@@ -747,4 +805,31 @@ Array.prototype.removeAll = function () {
     return this.length;
 };
 
+// Object extenders //
+Object.defineProperties(Object, {
+    'extend': {
+        'configurable': true,
+        'enumerable': false,
+        'value': function extend(what, wit) {
+            var extObj, witKeys = Object.keys(wit);
+            extObj = Object.keys(what).length ? Object.clone(what) : {};
+            witKeys.forEach(function(key) {
+                Object.defineProperty(extObj, key, Object.getOwnPropertyDescriptor(wit, key));
+            });
+            return extObj;
+        },
+        'writable': true
+    },
+    'clone': {
+        'configurable': true,
+        'enumerable': false,
+        'value': function clone(obj) {
+            return Object.extend({}, obj);
+        },
+        'writable': true
+    }
+});
 
+Object.prototype.equal = function() {
+    throw "Not yet implemented";
+};
