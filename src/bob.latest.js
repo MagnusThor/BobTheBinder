@@ -11,10 +11,17 @@ function (selector, el) {
     }
     return el.querySelector(selector);
 };
+
 var Bob = Bob || {};
 
+Bob.Guid = {
+    newGuid: function(a, b) {
+        for (b = a = ''; a++ < 36; b += a * 51 & 52 ? (a ^ 15 ? 8 ^ Math.random() * (a ^ 20 ? 16 : 4) : 4).toString(16) : '-');
+        return b;
+    }
+};
 
-var getExpression = function (data) {
+var getExpression = function(data) {
     var prop = data.split(".").first();
     var args = prop.match(/\((.*?)\)/);
     // is a function , remove the arguments...
@@ -26,9 +33,9 @@ var getExpression = function (data) {
         prop: expr,
         args: args,
         isFn: args === null ? false : true,
-      
+
     }
-}
+};
 
 Bob.serializeForm = function (form) {
     if (!form) form = this;
@@ -43,10 +50,15 @@ Bob.serializeForm = function (form) {
     }
     return data;
 };
+
 Bob.binders = {
-    registerBinder: function(name, binder) {
-        if (this.hasOwnProperty(name))
+    registerBinder: function (name, binder,cb) {
+        if (!this.hasOwnProperty(name)) {
             this[name] = binder;
+        } else {
+            throw "Binder name already exists '" + name + "'";
+        }
+        if (cb) cb();
         return this;
     },
     hide: function(node, onchange) {
@@ -88,7 +100,8 @@ Bob.binders = {
             onchange(node.value);
         });
         return {
-            updateProperty: function(value) {
+            updateProperty: function (value) {
+             
                 if (value !== node.value) {
                     node.value = value;
                 }
@@ -279,37 +292,36 @@ Bob.binders = {
             }
         };
     },
-   
 };
-
-
-
 
 
 Bob.Notifier = (function () {
     var ctor = function () {
-        var self = this;
-        this.notifiers = [];
-        this.on = function (mutator, fn, cb) {
-            var n;
-            var exists = self.notifiers.findBy(function (p) {
-                return p.name == mutator;
-            });
-            if (exists.length == 0)
-                n = new Bob.Dispatcher(mutator, fn);
-            self.notifiers.push(n);
-            if (cb) {
-                cb.apply(n, [n]);
-            }
-            return n;
+        var notifiers = [];
+        this.name = undefined;
+        this.on = function(obj, mutator, fn) {
 
-        }
-
+            obj["$bob"] = new Bob.Dispatcher(mutator, fn);
+           
+            notifiers.push(
+                obj["$bob"]
+            );
+            return obj["$bob"];
+        };
+        this.clone = function(name, obj) {
+            obj["$bob"] =
+                notifiers.findBy(function(pre) {
+                    return pre.name === name;
+                }).first();
+        };
+       
         this.off = function (mutator, cb) {
-            var exists = self.notifiers.findBy(function (p) {
-                return p.name == mutator;
+            var index = notifiers.findIndex(function(pre) {
+                return pre.name === mutator;
             });
-            return this;
+            notifiers.splice(index, 1);
+            if (cb) cb();
+        
         };
 
     };
@@ -317,15 +329,11 @@ Bob.Notifier = (function () {
 })();
 
 Bob.Dispatcher = (function () {
-  
-    var ctor = function (name, fn) {
-      
+    var ctor = function(name,map, fn) {
         this.name = name;
         this.fn = fn;
-        this.ts = new Date();
-       
-    }
-    ctor.prototype.add = function(fn) {
+    };
+    ctor.prototype.add = function (fn) {
         this.$add = fn;
         return this;
     };
@@ -344,18 +352,16 @@ Bob.Dispatcher = (function () {
 
 Bob.apply = function (binders) {
     if (!binders) binders = Bob.binders;
+    var instanceId = Bob.Guid.newGuid();
     var $root;
     var notifier = new Bob.Notifier();
-    function findObservable(obj, path, parent) {
-      
-        if (path === "$this") {
+    function findObservable(obj, path) {
+        if (path.indexOf("$this").length > 0) {
             return obj;
         }
         var parts = path.split(".");
         var meta = getExpression(parts[0]);
-
         var root = (new RegExp("^\\$root")).test(meta.prop);
-
         if (root) {
             return findObservable($root, parts.slice(1).join("."),path);
         }
@@ -363,10 +369,6 @@ Bob.apply = function (binders) {
             if (meta.isFn) {
                 var fnResult = (obj[meta.prop]).apply(obj, meta.args[1].split(","));
                 return fnResult;
-            }
-
-            if (Array.isArray(obj[meta.prop])) {
-                return obj[meta.prop];
             }
             if ((typeof (obj[meta.prop]) === "object")) {
                   return obj[meta.prop];
@@ -380,20 +382,21 @@ Bob.apply = function (binders) {
             return findObservable(obj[meta.prop], parts.slice(1).join("."),path);
         }
     };
-
-    function bindObject(node, binderName, object, propertyName,parentObject) {
-        var objectToObserve =  findObservable(object, propertyName);
+    function bindObject(node, binderName, object, propertyName) {
+        var objectToObserve = findObservable(object, propertyName);
         var context;
-
         if (node.dataset.attr) {
             bindAttributes(node, objectToObserve);
         }
         var propertySet = propertyName.split("|");
+
         propertyName = propertySet[0];
+
         propertySet = propertySet.slice(1);
 
 
         var removeValue = function (value) {
+         
             if (!objectToObserve[propertyName.split(".").pop()]) {
                 if (Array.isArray(objectToObserve)) {
                   
@@ -407,19 +410,24 @@ Bob.apply = function (binders) {
                 //  throw "Not yet implemented";
             }
         };
-
         var addValue = function (value, parent) {
             if (!parent) {
                 parent = propertyName;
             }
             if (!objectToObserve[parent.split(".").pop()]) {
+
                 if (Array.isArray(objectToObserve)) {
+                   
                     var m = objectToObserve.findIndex(function (ar) {
                         return JSON.stringify(ar) === JSON.stringify(value);
                     });
-                    if(m === -1)
-                    objectToObserve.push(value);
+
+                    if (m === -1)
+
+                        objectToObserve.push(value);
+
                 } else {
+                  
                     for (var prop in value) {
                         objectToObserve[prop] = value[prop];
                     }
@@ -428,17 +436,13 @@ Bob.apply = function (binders) {
                 throw "Not yet implemented";
             }
         };
-
-
-        var updateValue = function(newValue, parent) {
+        var updateValue = function (newValue, parent) {
             if (!parent) {
                 parent = propertyName;
             }
                 objectToObserve[parent.split(".").pop()] = newValue;
             return;
         }
-
-
       
         var binder = binders[binderName](node, updateValue, addValue, removeValue, object);
 
@@ -446,52 +450,76 @@ Bob.apply = function (binders) {
         var r = propertyName.split(".").pop();
         r = r.replace("(", "").replace(")", "");
 
-        if (node.dataset.with && propertySet.length === 0) {
+        if (node.dataset.with && propertySet.length === 0) {           
             context = findObservable($root, node.dataset.with);
-           
         } else if (propertySet.length > 1) {
             context = findObservable($root, propertySet[0]);
         }
 
-      
+            binder.updateProperty.apply(object, [objectToObserve.hasOwnProperty(r) ? objectToObserve[r] : objectToObserve, binderName, objectToObserve, object, propertySet, context]);
 
       
-        var toObserve = objectToObserve.hasOwnProperty(r) ? objectToObserve[r] : objectToObserve;
-
-        binder.updateProperty.apply(object, [toObserve, binderName, objectToObserve, object, propertySet, context]);
-
         var observer = function (changes) {
-           
-            var changed = changes.some(function (change) {
-                return change.name === propertyName.split(".").pop();
+            var n = objectToObserve["$bob"];
+            var changed = changes.some(function (a) {
+                return a.name === propertyName.split(".").pop();
             });
-
             if (changed) {
-               
+                var change = changes.first();
+                var args = change.object;
+                if (n) {
+                    if (n.hasOwnProperty("$" + change.type))
+                        n["$" + change.type].apply(change.object, [args, change.name, change.type, change.oldValue]);
+                    if (n.fn)
+                        n.fn.apply(n, [args, change.name, change.type, change.oldValue]);
+                    n.type = change.type;
+                };
                 binder.updateProperty(objectToObserve[r], binderName, objectToObserve, object, propertySet, context);
             }
             if (typeof (objectToObserve[r]) === "function" && !changed) {
                 binder.updateProperty(objectToObserve[r], binderName, objectToObserve, object, propertySet, context);
             }
         };
-
-        try {
+        var observe =
+             function() {
             Object.observe(objectToObserve, observer);
-        } catch (e) {
+             }
 
-        } 
-       
+        var unobserve = function() {
+            Object.unobserve(objectToObserve, observer);
+        }
+        if (typeof (objectToObserve) === "object") {
+            
+     
+           Object.observe(objectToObserve, observer);
+
+        Object.observe(objectToObserve, function (changes) {
+           
+            changes.forEach(function (change) {
+                var changed = changes.some(function (a) {
+                    return a.key === propertyName.split(".").pop();
+                });
+                if (change.type === "$update" && changed) {
+                    Object.unobserve(objectToObserve, observer);
+                    binder.updateProperty(change.$object[change.key], binderName, change.object, object, propertySet, context);
+                    Object.observe(objectToObserve, observer);
+                };
+            });
+        }, ["$update"]);
+        }
+
 
         return {
-            unobserve: function() {
+            propertyName : propertyName,
+            $binder: function (value,obj) {
                 Object.unobserve(objectToObserve, observer);
-            },
-            observe: function() {
+                binder.updateProperty(value, binderName, obj, object, propertySet, context);
                 Object.observe(objectToObserve, observer);
-            }
+            },
+            observe: observe,
+            unobserve: unobserve
         };
     };
-
     function bindAttributes(node, object) {
         if (typeof(object) !== "object") return;
         var bindItem = function(element) {
@@ -510,7 +538,8 @@ Bob.apply = function (binders) {
             var model = bindModel(node, object);
             return model;
         };
-        var updateItem = function(element, update) {
+        var updateItem = function (element, update) {
+
             var attributes = node.dataset.attr.split(",");
             attributes.forEach(function(attr) {
                 var parts = attr.split(":");
@@ -545,112 +574,122 @@ Bob.apply = function (binders) {
     function bindCollection(node, array) {
         function capture(original) {
             var before = original.previousSibling;
-            var parent = original.parentNode;
+            var parentNode = original.parentNode;
             var cloned = original.cloneNode(true);
             original.parentNode.removeChild(original);
             return {
                 insert: function () {
                     var newNode = cloned.cloneNode(true);
-                    parent.insertBefore(newNode, before);
+                    parentNode.insertBefore(newNode, before);
                     return newNode;
                 }
             };
         }
         node.dataset.parent = node.dataset.repeat;
-
         delete node.dataset.repeat;
-
         var parent = node.parentNode;
         var captured = capture(node);
         var bindItem = function (element) {
-           
             var newEl = captured.insert();
-           
             var model = bindModel(newEl, element, array);
-            
             if (node.dataset.attr) {
                 bindAttributes(newEl, element);
             }
+           
             return model;
         };
-
         var bindings = array.map(function (a) {
-          
             return bindItem(a);
         });
-
-     
+       
         var observer = function (changes) {
-
-         
+            var n = array["$bob"];
+            var tc = changes.findIndex(function(pre) {
+                return pre.type === "delete";
+            });
+            if (tc >= 0 && n)
+               n["$delete"].apply(changes[0].oldValue, [changes[0].oldValue, changes[0].name, "delete"]);
+            
             changes.forEach(function (change) {
                 var index = parseInt(change.name, 10), child;
                 if (isNaN(index)) return;
+                var args = isNaN(index) ? change.object : change.object[index];
+                if (!args) args = change.object;
                 if (change.type === 'add') {
+                    if (n && n.hasOwnProperty("$add")) {
+                         n["$" + change.type].apply(change.object, [args, change.name, change.type, change.oldvalue]);
+                    }
                     bindings.push(bindItem(array[index]));
                 } else if (change.type === 'update') {
                     bindings[index].unobserve();
                     bindModel(parent.children[index], array[index]);
                 } else if (change.type === 'delete') {
-                    bindings.pop().unobserve();
                     child = parent.children[index];
-                 
                     child.parentNode.removeChild(child);
                 }
             });
         };
 
+        var unobserve = function () {
+            Object.unobserve(array, observer);
+        };
+        var observe = function () {
+            Object.observe(array, observer);
+        };
         Object.observe(array, observer);
+        Object.observe(array, function (changes) {
+         
+            changes.forEach(function (change) {
+                var index, obj,child;
+                if (change.type === "$add") {
+                    obj = change.$object;
+                    Object.unobserve(array, observer);
+                    index = array.push(obj);
+                    bindings.push(bindItem(array[index-1]));
+                    Object.observe(array, observer);
 
+                } else if (change.type === "$delete") {
+                    var remove = change.$object;
+                    index = array.findIndex(function (pre) {
+                        return JSON.stringify(pre) === JSON.stringify(remove);
+                    });
+                    child = parent.children[index];
+                    child.parentNode.removeChild(child);
+                    Object.unobserve(array, observer);
+                    array.remove(index);
+                    Object.observe(array, observer);
+                } else if (change.type === "$update") {
+                    index = array.findIndex(function (pre) {
+                      
+                        return pre[change.key] === change.oldValue;
+                    });
+
+                    if (bindings[index]) {
+                        var l = bindings[index].bindings.findBy(function (a) {
+                            if(a)
+                             return a.first().propertyName === change.key;
+                        });
+                    }
+                    array[index][change.key] = change.$object[change.key];
+                    Object.observe(array, observer);
+
+                    if (l) {
+                        l.forEach(function (binder) {
+                            var method = binder.first().$binder;
+                            method.apply(change, [change.$object[change.key], change.$object]);
+                        });
+                    }
+                }
+            });
+        }, ["$add","$delete","$update"]);
         return {
-            unobserve: function() {
-                Object.unobserve(array, observer);
-            },
-            observe: function() {
-                Object.observe(object, observer);
-            }
+            unobserve: unobserve,
+            observe: observe
         };
     }
-
-    var registredNotifiers = [];
-
-
-    function bindModel(container, object,p) {
-
-
+    function bindModel(container, object) {
         if (typeof (container) === "string") container = document.querySelector(container);
-
-        if (notifier) {
-            var nfs = notifier.notifiers.map(function (n) {
-                if (registredNotifiers.findBy(function(pre) {
-                    return pre === n.name;
-                }).length === 0) {
-                    var no = findObservable(object, n.name);
-                    Object.observe(no, function (changes) {
-
-                        var change = changes[0];
-                      //  changes.forEach(function (change) {
-                            var index = parseInt(change.name, 10);
-                            var args = isNaN(index) ? change.object : change.object[index];
-                            if (!args) args = change.object;
-                            n.ts = new Date();
-                            n.type = change.type;
-                            if (n.hasOwnProperty("$" + change.type))
-                                n["$" + change.type].apply(no,[args,change.name,change.type,change.oldValue]);
-                            if (n.fn)
-                                n.fn.apply(n, [args, change.name, change.type, change.oldValue]);
-                      //  });
-                    });
-                    registredNotifiers.push(n.name);
-                };
-                return n.name;
-            });
-        };
-
         if (!$root) $root = object;
-
-       
-    
         function isDirectNested(node) {
             node = node.parentElement;
             while (node) {
@@ -669,29 +708,35 @@ Bob.apply = function (binders) {
         }
 
         var bindings = onlyDirectNested('[data-bind]').map(function (node) {
+
             var datasets = node.dataset.bind;
-            datasets.split(",").forEach(function(dataset) {
+            return datasets.split(",").map(function(dataset) {
                 var binderName = dataset.substr(0, dataset.indexOf(":"));
                 var binderProp = dataset.substr(binderName.length + 1, dataset.length);
-                bindObject(node, binderName, object, binderProp);
+                return bindObject(node, binderName, object, binderProp, datasets);
             });
-        }).concat(onlyDirectNested('[data-repeat]').map(function(node) {
-            return bindCollection(node, findObservable(object, node.dataset.repeat));
+          
+          
+        }).concat(onlyDirectNested('[data-repeat]').map(function (node) {
+
+            var obj = findObservable(object, node.dataset.repeat);
+
+
+
+            return bindCollection(node, obj);
 
         })).concat([container].map(function (node) {
-           
             var datasets = node.dataset.bind;
             if (!datasets) return;
-            datasets.split(",").forEach(function (dataset) {
-               
+            return datasets.split(",").forEach(function (dataset) {
                 var binderName = dataset.substr(0, dataset.indexOf(":"));
                 var binderProp = dataset.substr(binderName.length + 1, dataset.length);
-                bindObject(node, binderName, object, binderProp, p);
-               
-
+                return bindObject(node, binderName, object, binderProp, datasets);
             });
         }));
+
         return {
+            bindings: bindings,
             unobserve: function() {
                 bindings.forEach(function(binding) {
                     if (binding) binding.unobserve();
@@ -701,14 +746,21 @@ Bob.apply = function (binders) {
                 bindings.forEach(function(binding) {
                     binding.observe();
                 });
-            }
+            },
+          
         };
-    }
-
+    };
     return {
-        notifier:notifier,
+        on: function () {
+            return notifier.on.apply(this, arguments);
+        },
+        off : function() {
+            return notifier.off.apply(this, arguments);
+        },
+        $instanceId: instanceId,
+        notifier: notifier,
         bind: bindModel,
-        $root: function() {
+        $root: function () {
             return $root;
         },
     };
@@ -830,6 +882,6 @@ Object.defineProperties(Object, {
     }
 });
 
-Object.prototype.equal = function() {
-    throw "Not yet implemented";
-};
+//Object.prototype.equalTo= function() {
+//    throw "Not yet implemented";
+//};
