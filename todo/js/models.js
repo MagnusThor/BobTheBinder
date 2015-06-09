@@ -40,6 +40,7 @@ var TodoItemViewModel = (function () {
         this.reset = function () {
             this.completed = false;
             this.task = "";
+            this.id = new Date();
         };
     };
     return model;
