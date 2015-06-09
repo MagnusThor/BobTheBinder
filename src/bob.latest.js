@@ -301,12 +301,16 @@ Bob.Notifier = (function () {
         this.name = undefined;
         this.on = function(obj, mutator, fn) {
 
-            obj["$bob"] = new Bob.Dispatcher(mutator, fn);
-           
-            notifiers.push(
-                obj["$bob"]
-            );
-            return obj["$bob"];
+            if (!obj.hasOwnProperty("$bob")) {
+
+
+                obj["$bob"] = new Bob.Dispatcher(mutator, fn);
+
+                notifiers.push(
+                    obj["$bob"]
+                );
+                return obj["$bob"];
+            } else return obj["$bob"];
         };
         this.clone = function(name, obj) {
             obj["$bob"] =
@@ -461,20 +465,29 @@ Bob.apply = function (binders) {
       
         var observer = function (changes) {
             var n = objectToObserve["$bob"];
+
             var changed = changes.some(function (a) {
                 return a.name === propertyName.split(".").pop();
             });
+
+            // need to fire just once for the property
+        
+
             if (changed) {
                 var change = changes.first();
                 var args = change.object;
+
                 if (n) {
+                
                     if (n.hasOwnProperty("$" + change.type))
-                        n["$" + change.type].apply(change.object, [args, change.name, change.type, change.oldValue]);
+                        n["$" + change.type].apply(change.object, [args, change.name, change.type, change.oldValue,binderName]);
                     if (n.fn)
-                        n.fn.apply(n, [args, change.name, change.type, change.oldValue]);
+                        n.fn.apply(n, [args, change.name, change.type, change.oldValue, binderName]);
                     n.type = change.type;
                 };
+
                 binder.updateProperty(objectToObserve[r], binderName, objectToObserve, object, propertySet, context);
+
             }
             if (typeof (objectToObserve[r]) === "function" && !changed) {
                 binder.updateProperty(objectToObserve[r], binderName, objectToObserve, object, propertySet, context);
@@ -607,7 +620,7 @@ Bob.apply = function (binders) {
             var tc = changes.findIndex(function(pre) {
                 return pre.type === "delete";
             });
-            if (tc >= 0 && n)
+            if (tc >= 0 && n && n.hasOwnProperty("$delete") )
                n["$delete"].apply(changes[0].oldValue, [changes[0].oldValue, changes[0].name, "delete"]);
             
             changes.forEach(function (change) {
@@ -738,8 +751,9 @@ Bob.apply = function (binders) {
         return {
             bindings: bindings,
             unobserve: function() {
-                bindings.forEach(function(binding) {
-                    if (binding) binding.unobserve();
+                bindings.forEach(function (binding) {
+                    
+                    if (binding && binding.hasOwnProperty("unobserve")) binding.unobserve();
                 });
             },
             observe: function() {
