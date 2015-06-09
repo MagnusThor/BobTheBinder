@@ -44,11 +44,7 @@ This is the most simple example.
         </div>
     </div>
 
-##More basic examples 
 
-More examples can be found at the following url 
-
-http://magnusthor.github.io/BobTheBinder/
 
 ##Documentation
 
@@ -56,5 +52,6 @@ Right now the documentation is in progress, as we still are working on the "**No
 
 ##Todo app
 
-Yes, of coz' there will be an **Todo app** example available soon :-)
+http://magnusthor.github.io/BobTheBinder/todo/default.html
+
 
