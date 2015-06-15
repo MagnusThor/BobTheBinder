@@ -1,0 +1,116 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>WebRTC DataChannels on Bob The Binder </title>
+    <style>
+      
+      
+    </style>
+</head>
+<body>
+
+    <div id="app">
+        <h1>FileShare using Bob The Binder & WebRTC DataChannels</h1>
+        <ul >
+            <li data-repeat="files">
+                <a data-bind="href:blobUrl" data-attr="download:name">
+                    <span data-bind="text:name">
+                         
+                    </span>
+                </a>
+            </li>
+        </ul>
+
+        <hr />
+        <input type="file" data-bind="loadfile:file" />
+        <button id="sendFile" data-bind="click:sendFile">Send file</button>
+
+        <span data-bind="text:file.meta.size"></span> bytes read.
+    </div>
+
+    <!-- We are using XSockets.NET API's for realtime commication (WebSockets, WebRTC etc)-->
+    <script src="//cdn.rawgit.com/XSockets/XSockets.Clients/master/src/XSockets.Clients/XSockets.JavaScript/XSockets.latest.js"></script>
+    <script src="//rawgit.com/XSockets/XSockets.WebRTC/master/src/js/XSockets.WebRTC.latest.min.js"></script>
+
+    <!-- Bring in Bob-->
+    <script src="/src/bob.latest.js"></script>
+
+    <script>
+
+       
+        // model
+        var FileModel = (function () {
+            var model = function (id, name, contentType, blobUrl) {
+                this.id = id;
+                this.name = name;
+                this.contentType = contentType;
+                this.blobUrl = blobUrl;
+            };
+            return model;
+        })();
+        var FileShareViewModel = (function () {
+            var model = function (fn) {
+                this.sendFile = function () {
+                    this.onsend(this.file);
+                };
+                this.onsend = fn ||
+                function () {
+                    throw "You need to set a delegate for onsend";
+                };
+                this.files = [];
+                this.file = {
+                    bytes: [],
+                    meta: {
+                        name: "",
+                        type: "",
+                        size: 0
+                    },
+                };
+            };
+            return model;
+        })();
+
+
+        var vm, app;
+        document.addEventListener("DOMContentLoaded", function () {
+            var ws = new XSockets.WebSocket("ws://hushhash.net:80", ["connectionbroker"], {
+                ctx: 'bedefc90-0fdf-4e29-897a-da255aef3bfa'
+            });
+            // pass a "static" context so all users are in the same room / session . 
+            // when we have a connection to the WebRTC "ConnectionBroker"
+            ws.onconnected = function () {
+                var rtc = new XSockets.WebRTC(ws.controller("connectionbroker"));
+                // Create a dataChannel to be used foe sharing files p2p
+                var dataChannel = new XSockets.WebRTC.DataChannel("fileShare");
+                dataChannel.subscribe("file", function (file) {
+                    vm.files.push(new FileModel(Bob.Guid.newGuid(), file.data.name, file.data.type, URL.createObjectURL(new Blob([file.binary], {
+                        type: file.data.type
+                    }))));
+                });
+                dataChannel.onopen = function () {
+                    // When the dataChannel is opened , this will fire..
+                };
+                // add the data channel
+                rtc.addDataChannel(dataChannel);
+                rtc.oncontextcreated = function (ctx) {
+                    // ctx will be bedefc90-0fdf-4e29-897a-da255aef3bfa as we pass as a paramater to the "connectionBroker"
+                    console.log("PeerConnection Context - ", ctx);
+                    rtc.connectToContext();
+                };
+                vm = new FileShareViewModel();
+                // this will be fiered when a user hits send..
+                vm.onsend = function (a) {
+                    // send the file as a blob ( Wrapped in usign the XSockets.BinaryMessage
+                    dataChannel.publishBinary("file", a.bytes, a.meta);
+                };
+                app = Bob.apply();
+                app.bind($("#app"), vm);
+            };
+        });
+
+    </script>
+
+
+</body>
+
+</html>
