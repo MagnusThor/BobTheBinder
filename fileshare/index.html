@@ -11,16 +11,19 @@
 
     <div id="app">
         <h1>FileShare using Bob The Binder & WebRTC DataChannels</h1>
+        <p>
+            
+            To run the example, open another instance of your browser
+
+        </p>
         <ul >
             <li data-repeat="files">
                 <a data-bind="href:blobUrl" data-attr="download:name">
                     <span data-bind="text:name">
-                         
                     </span>
                 </a>
             </li>
         </ul>
-
         <hr />
         <input type="file" data-bind="loadfile:file" />
         <button id="sendFile" data-bind="click:sendFile">Send file</button>
