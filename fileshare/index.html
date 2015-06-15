@@ -52,6 +52,7 @@
         var FileShareViewModel = (function () {
             var model = function (fn) {
                 this.sendFile = function () {
+                    if (this.file.size === 0) return;
                     this.onsend(this.file);
                 };
                 this.onsend = fn ||
