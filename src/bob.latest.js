@@ -61,9 +61,48 @@ Bob.binders = {
         if (cb) cb();
         return this;
     },
+
+    loadfile: function (node, onchange) {
+        var previousListener;
+        var readFile = (function () {
+            var file = function () {
+                this.read = function (f, fn) {
+                    var reader = new FileReader();
+                    reader.onload = (function (tf) {
+                        return function (e) {
+                            fn(tf, e.target.result);
+                        };
+                    })(f);
+                    reader.readAsArrayBuffer(f);
+                }
+            }
+            return file;
+        }());
+        return {
+            updateProperty: function (value) {
+                var listener = function (evt) {
+                    var reader = new readFile();
+                    var file = evt.target.files[0];
+                    for (var p in file) {
+                        value.meta[p] = file[p];
+                    };
+                    reader.read(file, function (result, arrayBuffer) {
+                        value.bytes = arrayBuffer;
+                    });
+                };
+                if (previousListener) 
+                    node.removeEventListener("change", listener);
+                node.addEventListener("change", listener);
+                previousListener = listener;
+            }
+        };        
+    },
     hide: function(node, onchange) {
         return {
-            updateProperty: function(value) {
+            updateProperty: function (value) {
+                if (typeof (value) === "function") {
+                    value = value();
+                };
                 if (value) {
                     node.style.display = "";
                 } else {
@@ -81,6 +120,7 @@ Bob.binders = {
                     newValue = newValue();
                 };
                 if (!newValue) return;
+
                 if (previous) {
                     previous.split(",").forEach(function(c) {
                         node.classList.remove(c);
@@ -278,9 +318,8 @@ Bob.binders = {
         var data;
 
         return {
-            updateProperty: function(fn) {
+            updateProperty: function (fn) {
                 if (!data) data = this;
-
                 var listener = function(e) {
                     fn.apply(data, [e]);
                 };
@@ -389,9 +428,7 @@ Bob.apply = function (binders) {
     function bindObject(node, binderName, object, propertyName) {
         var objectToObserve = findObservable(object, propertyName);
         var context;
-        if (node.dataset.attr) {
-            bindAttributes(node, objectToObserve);
-        }
+       
         var propertySet = propertyName.split("|");
 
         propertyName = propertySet[0];
@@ -533,46 +570,16 @@ Bob.apply = function (binders) {
             unobserve: unobserve
         };
     };
-    function bindAttributes(node, object) {
-        if (typeof(object) !== "object") return;
-        var bindItem = function(element) {
-            var attributes = node.dataset.attr.split(",");
-            attributes.forEach(function(attr) {
-                var parts = attr.split(":");
-                switch (parts[0]) {
-                case "innerText":
-                    element.textContent = object[parts[1]];
-                    break;
-
-                    default:
-                    element.setAttribute(parts[0], object[parts[1]]);
-                }
-            });
-            var model = bindModel(node, object);
-            return model;
-        };
+    function bindAttributes(node, attr,object,key) {
+        node.setAttribute(attr, object[key]);
         var updateItem = function (element, update) {
-
-            var attributes = node.dataset.attr.split(",");
-            attributes.forEach(function(attr) {
-                var parts = attr.split(":");
-                if (parts[0] === "text") {
-                    element.textContent = update[parts[1]];
-                } else {
-                    var r = parts[1].split(".").pop();
-                    if (r)
-                        r = r.replace("(", "").replace(")", "");
-                    var isFn = typeof (object[r]) === "function";
-                    element.setAttribute(parts[0], isFn ? object[r]() : object[parts[1].split(".").pop()]);
-                }
-            });
-            var model = bindModel(node, update);
-            return model;
+            node.setAttribute(attr, update);
         }
-        bindItem(node);
         var observer = function(changes) {
-            updateItem(node, changes[0].object);
+            updateItem(node, object[changes[0].name]);
         };
+
+        delete node.dataset.attr;
 
         Object.observe(object, observer);
         return {
@@ -605,10 +612,6 @@ Bob.apply = function (binders) {
         var bindItem = function (element) {
             var newEl = captured.insert();
             var model = bindModel(newEl, element, array);
-            if (node.dataset.attr) {
-                bindAttributes(newEl, element);
-            }
-           
             return model;
         };
         var bindings = array.map(function (a) {
@@ -746,6 +749,18 @@ Bob.apply = function (binders) {
                 var binderProp = dataset.substr(binderName.length + 1, dataset.length);
                 return bindObject(node, binderName, object, binderProp, datasets);
             });
+        })).concat(onlyDirectNested('[data-attr]').map(function(node) {
+           
+            var datasets = node.dataset.attr;
+
+            return datasets.split(",").map(function (dataset) {
+              
+                var binderName = dataset.substr(0, dataset.indexOf(":"));
+                var binderProp = dataset.substr(binderName.length + 1, dataset.length);
+
+                return bindAttributes(node, binderName, object, binderProp);
+            });
+
         }));
 
         return {
