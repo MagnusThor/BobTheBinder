@@ -394,7 +394,13 @@ Bob.Dispatcher = (function () {
 
 
 Bob.apply = function (binders) {
+
     if (!binders) binders = Bob.binders;
+
+
+    
+
+
     var instanceId = Bob.Guid.newGuid();
     var $root;
     var notifier = new Bob.Notifier();
@@ -703,8 +709,33 @@ Bob.apply = function (binders) {
             observe: observe
         };
     }
+
+
+    var applyTemplate = function (node, tmpl,object) {
+        window.fetch(tmpl, { method: 'get' }).then(function (res) {
+            return res.text();
+        }).then(function (html) {
+            node.insertAdjacentHTML('afterbegin', html);
+            bindModel(node, object);
+
+        });
+    };
+   
+   
     function bindModel(container, object) {
-        if (typeof (container) === "string") container = document.querySelector(container);
+
+        if (typeof (container) === "string") container = $(container);
+        var templates = typeof (container) === "object" ?  container.querySelectorAll("[data-template]") : $(container).querySelectorAll("[data-template]");
+
+       
+    
+        for (var i = 0; i < templates.length; i++) {
+            applyTemplate(templates[i], templates[i].dataset.template, object);
+            delete templates[i].dataset.template;
+        }
+
+        
+
         if (!$root) $root = object;
         function isDirectNested(node) {
             node = node.parentElement;
@@ -838,11 +869,8 @@ Array.prototype.findBy = function (pre) {
     var arr = this;
     var result = [];
     for (var i = 0; i < arr.length; i++) {
-
         if (pre(arr[i]))
             result.push(arr[i]);
-
-
     };
     return result;
 };
