@@ -12,6 +12,56 @@ function (selector, el) {
     return el.querySelector(selector);
 };
 
+(function () {
+    Element.prototype._addEventListener = Element.prototype.addEventListener;
+    Element.prototype.addEventListener = function (a, b, c) {
+
+        if (c == undefined) c = false;
+        this._addEventListener(a, b, c);
+        if (!this.eventListenerList) this.eventListenerList = {};
+        if (!this.eventListenerList[a]) this.eventListenerList[a] = [];
+        //this.removeEventListener(a,b,c); // TODO - handle duplicates.. 
+        this.eventListenerList[a].push({ listener: b, useCapture: c });
+    };
+
+    Element.prototype.getEventListeners = function (a) {
+        if (!this.eventListenerList) this.eventListenerList = {};
+        if (a == undefined) return this.eventListenerList;
+        return this.eventListenerList[a];
+    };
+    Element.prototype.clearEventListeners = function (a) {
+        if (!this.eventListenerList) this.eventListenerList = {};
+        if (a == undefined) {
+            for (var x in (this.getEventListeners())) this.clearEventListeners(x);
+            return;
+        }
+        var el = this.getEventListeners(a);
+        if (el == undefined) return;
+        for (var i = el.length - 1; i >= 0; --i) {
+            var ev = el[i];
+            this.removeEventListener(a, ev.listener, ev.useCapture);
+        }
+    };
+
+
+    Element.prototype._removeEventListener = Element.prototype.removeEventListener;
+    Element.prototype.removeEventListener = function (a, b, c) {
+        if (c == undefined) c = false;
+        this._removeEventListener(a, b, c);
+        if (!this.eventListenerList) this.eventListenerList = {};
+        if (!this.eventListenerList[a]) this.eventListenerList[a] = [];
+        // find the event in the list
+        for (var i = 0; i < this.eventListenerList[a].length; i++) {
+            if (this.eventListenerList[a][i].listener == b, this.eventListenerList[a][i].useCapture == c) { // hmm..
+                this.eventListenerList[a].splice(i, 1);
+                break;
+            }
+        }
+        if (this.eventListenerList[a].length == 0) delete this.eventListenerList[a];
+    };
+
+})();
+
 var Bob = Bob || {};
 
 Bob.Guid = {
@@ -63,7 +113,7 @@ Bob.binders = {
     },
 
     loadfile: function (node, onchange) {
-        var previousListener;
+       
         var readFile = (function () {
             var file = function () {
                 this.read = function (f, fn) {
@@ -80,7 +130,9 @@ Bob.binders = {
         }());
         return {
             updateProperty: function (value) {
+                node.clearEventListeners("change");
                 var listener = function (evt) {
+
                     var reader = new readFile();
                     var file = evt.target.files[0];
                     for (var p in file) {
@@ -90,10 +142,9 @@ Bob.binders = {
                         value.bytes = arrayBuffer;
                     });
                 };
-                if (previousListener) 
-                    node.removeEventListener("change", listener);
+               
                 node.addEventListener("change", listener);
-                previousListener = listener;
+               
             }
         };        
     },
@@ -135,7 +186,20 @@ Bob.binders = {
             }
         }
     },
-    value: function(node, onchange) {
+    keyup: function (node, onchange) {
+        node.clearEventListeners("keyup");
+        node.addEventListener('keyup', function() {
+            onchange(node.value);
+        });
+        return {
+            updateProperty: function () {
+                var args = arguments;
+                if (typeof (args[0]) !== "function") node.value = args[0];
+            }
+        };
+    },
+    value: function (node, onchange) {
+        node.clearEventListeners("keyup");
         node.addEventListener('keyup', function() {
             onchange(node.value);
         });
@@ -178,17 +242,13 @@ Bob.binders = {
     },
     input: function(node) {
         return {
-            updateProperty: function(value) {
+            updateProperty: function (value) {
+                node.clearEventListeners("input");
                 var args = arguments;
-
                 var listener = function(evt) {
-
                     args[0].apply(args[0](), [JSON.stringify(args[2])]);
                 };
-
                 node.addEventListener("input", listener);
-
-
             }
         };
     },
@@ -199,22 +259,24 @@ Bob.binders = {
             }
         };
     },
-    text: function(node) {
+    text: function (node) {
+     
         return {
-            updateProperty: function(text) {
-                node.textContent = text;
-            }
-        };
+            updateProperty: function (value) {
+                node.textContent = typeof (value) === "function" ? value() : value;
+            },
+          
+    };
     },
     selectchange: function(node, onchange, onadd, onremove) {
         var obj;
 
 
         return {
-            updateProperty: function() {
+            updateProperty: function () {
+                node.clearEventListeners("change");
                 var args = arguments;
                 obj = args[5];
-
                 var listener = function(e) {
                     var options = e.target.querySelectorAll("option");
                     for (var i = 0; i < options.length; i++) {
@@ -235,7 +297,8 @@ Bob.binders = {
     select: function(node) {
 
         return {
-            updateProperty: function() {
+            updateProperty: function () {
+
                 var args = arguments;
                 if (Array.isArray(args[0])) {
                     var values = args[0];
@@ -261,16 +324,15 @@ Bob.binders = {
         }
     },
     checkchange: function(node, onchange, onadd, onremove) {
-        var previous;
+      
         var obj;
         var isBool;
         return {
             updateProperty: function() {
                 var args = arguments;
                 obj = args[3];
-
+                node.clearEventListeners("click");
                 if (!isBool) isBool = typeof(args[0]) === "boolean";
-
 
                 var listener = function(e) {
                     if (isBool) {
@@ -283,10 +345,7 @@ Bob.binders = {
                         } else onremove(obj);
                     };
                 }
-                if (previous) {
-                    node.removeEventListener("click", previous);
-                }
-                previous = listener;
+               
                 node.addEventListener('click', listener);
             }
         }
@@ -306,27 +365,22 @@ Bob.binders = {
         }
     },
     validate: function (node) {
-        var previous;
-        var pattern = node.dataset.pattern;
         return {
             updateProperty: function (v) {
             }
         }
     },
     click: function(node) {
-        var previous;
+     
         var data;
-
+        
         return {
             updateProperty: function (fn) {
+                node.clearEventListeners("click");
                 if (!data) data = this;
-                var listener = function(e) {
+                function listener (e) {
                     fn.apply(data, [e]);
                 };
-                if (previous) {
-                    node.removeEventListener("click", previous);
-                }
-                previous = listener;
                 node.addEventListener('click', listener);
             }
         };
@@ -398,18 +452,22 @@ Bob.apply = function (binders) {
     if (!binders) binders = Bob.binders;
 
 
-    
+    var depenents = []; 
 
 
     var instanceId = Bob.Guid.newGuid();
     var $root;
     var notifier = new Bob.Notifier();
     function findObservable(obj, path) {
+      
         if (path.indexOf("$this").length > 0) {
             return obj;
         }
         var parts = path.split(".");
         var meta = getExpression(parts[0]);
+
+     
+
         var root = (new RegExp("^\\$root")).test(meta.prop);
         if (root) {
             return findObservable($root, parts.slice(1).join("."),path);
@@ -417,6 +475,7 @@ Bob.apply = function (binders) {
         if (parts.length == 1) {
             if (meta.isFn) {
                 var fnResult = (obj[meta.prop]).apply(obj, meta.args[1].split(","));
+               
                 return fnResult;
             }
             if ((typeof (obj[meta.prop]) === "object")) {
@@ -434,16 +493,10 @@ Bob.apply = function (binders) {
     function bindObject(node, binderName, object, propertyName) {
         var objectToObserve = findObservable(object, propertyName);
         var context;
-       
         var propertySet = propertyName.split("|");
-
         propertyName = propertySet[0];
-
         propertySet = propertySet.slice(1);
-
-
         var removeValue = function (value) {
-         
             if (!objectToObserve[propertyName.split(".").pop()]) {
                 if (Array.isArray(objectToObserve)) {
                   
@@ -484,42 +537,45 @@ Bob.apply = function (binders) {
             }
         };
         var updateValue = function (newValue, parent) {
+         
             if (!parent) {
                 parent = propertyName;
             }
-                objectToObserve[parent.split(".").pop()] = newValue;
+            parent = parent.split(".").pop();
+            parent = parent.replace("(", "").replace(")", "");
+            if (typeof (objectToObserve[parent]) == "function") {
+                objectToObserve[parent].apply(objectToObserve[parent], [newValue]);
+            }else
+                objectToObserve[parent] = newValue;
+            
+
             return;
         }
       
         var binder = binders[binderName](node, updateValue, addValue, removeValue, object);
 
         // todo: refactor
-        var r = propertyName.split(".").pop();
-        r = r.replace("(", "").replace(")", "");
+        var key = propertyName.split(".").pop();
+        //r = r.replace("(", "").replace(")", "");
+
+      
 
         if (node.dataset.with && propertySet.length === 0) {           
             context = findObservable($root, node.dataset.with);
         } else if (propertySet.length > 1) {
             context = findObservable($root, propertySet[0]);
         }
+        binder.updateProperty.apply(object, [objectToObserve.hasOwnProperty(key) ? objectToObserve[key] : objectToObserve,
+            binderName, objectToObserve, object, propertySet, context || null]);
 
-            binder.updateProperty.apply(object, [objectToObserve.hasOwnProperty(r) ? objectToObserve[r] : objectToObserve, binderName, objectToObserve, object, propertySet, context]);
-
-      
         var observer = function (changes) {
             var n = objectToObserve["$bob"];
-
             var changed = changes.some(function (a) {
                 return a.name === propertyName.split(".").pop();
             });
-
-            // need to fire just once for the property
-        
-
             if (changed) {
                 var change = changes.first();
                 var args = change.object;
-
                 if (n) {
                 
                     if (n.hasOwnProperty("$" + change.type))
@@ -528,33 +584,28 @@ Bob.apply = function (binders) {
                         n.fn.apply(n, [args, change.name, change.type, change.oldValue, binderName]);
                     n.type = change.type;
                 };
-
-                binder.updateProperty(objectToObserve[r], binderName, objectToObserve, object, propertySet, context);
-
+                binder.updateProperty(objectToObserve[key], binderName, objectToObserve, object, propertySet, context);
             }
-            if (typeof (objectToObserve[r]) === "function" && !changed) {
-                binder.updateProperty(objectToObserve[r], binderName, objectToObserve, object, propertySet, context);
+            if (typeof (objectToObserve[key]) === "function" && !changed) {
+                binder.updateProperty(objectToObserve[key], binderName, objectToObserve, object, propertySet, context);
             }
         };
-        var observe =
-             function() {
+        var observe = function () {
             Object.observe(objectToObserve, observer);
-             }
-
+        }
         var unobserve = function() {
             Object.unobserve(objectToObserve, observer);
         }
         if (typeof (objectToObserve) === "object") {
-            
-     
+
            Object.observe(objectToObserve, observer);
 
-        Object.observe(objectToObserve, function (changes) {
-           
+           Object.observe(objectToObserve, function (changes) {
             changes.forEach(function (change) {
                 var changed = changes.some(function (a) {
                     return a.key === propertyName.split(".").pop();
                 });
+             
                 if (change.type === "$update" && changed) {
                     Object.unobserve(objectToObserve, observer);
                     binder.updateProperty(change.$object[change.key], binderName, change.object, object, propertySet, context);
@@ -598,6 +649,7 @@ Bob.apply = function (binders) {
         };
     };
     function bindCollection(node, array) {
+      
         function capture(original) {
             var before = original.previousSibling;
             var parentNode = original.parentNode;
@@ -626,9 +678,13 @@ Bob.apply = function (binders) {
        
         var observer = function (changes) {
             var n = array["$bob"];
+
             var tc = changes.findIndex(function(pre) {
                 return pre.type === "delete";
             });
+
+          
+
             if (tc >= 0 && n && n.hasOwnProperty("$delete") )
                n["$delete"].apply(changes[0].oldValue, [changes[0].oldValue, changes[0].name, "delete"]);
             
@@ -646,7 +702,9 @@ Bob.apply = function (binders) {
                     bindings[index].unobserve();
                     bindModel(parent.children[index], array[index]);
                 } else if (change.type === 'delete') {
+                    
                     child = parent.children[index];
+                  
                     child.parentNode.removeChild(child);
                 }
             });
@@ -662,6 +720,10 @@ Bob.apply = function (binders) {
         Object.observe(array, function (changes) {
          
             changes.forEach(function (change) {
+
+              
+
+
                 var index, obj,child;
                 if (change.type === "$add") {
                     obj = change.$object;
@@ -726,8 +788,6 @@ Bob.apply = function (binders) {
 
         if (typeof (container) === "string") container = $(container);
         var templates = typeof (container) === "object" ?  container.querySelectorAll("[data-template]") : $(container).querySelectorAll("[data-template]");
-
-       
     
         for (var i = 0; i < templates.length; i++) {
             applyTemplate(templates[i], templates[i].dataset.template, object);
@@ -767,8 +827,6 @@ Bob.apply = function (binders) {
         }).concat(onlyDirectNested('[data-repeat]').map(function (node) {
 
             var obj = findObservable(object, node.dataset.repeat);
-
-
 
             return bindCollection(node, obj);
 
