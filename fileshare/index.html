@@ -32,9 +32,9 @@
     </div>
 
     <!-- We are using XSockets.NET API's for realtime commication (WebSockets, WebRTC etc)-->
-    <script src="//cdn.rawgit.com/XSockets/XSockets.Clients/master/src/XSockets.Clients/XSockets.JavaScript/XSockets.latest.js"></script>
-    <script src="//rawgit.com/XSockets/XSockets.WebRTC/master/src/js/XSockets.WebRTC.latest.min.js"></script>
 
+    <script src="js/vendor/XSockets.latest.min.js"></script>
+    <script src="js/vendor/XSockets.WebRTC.latest.js"></script>
     <!-- Bring in Bob-->
     <script src="//cdn.rawgit.com/MagnusThor/BobTheBinder/master/src/bob.the.binder.js"></script>
 
@@ -78,7 +78,7 @@
 
         var vm, app;
         document.addEventListener("DOMContentLoaded", function () {
-            var ws = new XSockets.WebSocket("ws://hushhash.net:80", ["connectionbroker"], {
+            var ws = new XSockets.WebSocket("wss://rtcplaygrouund.azurewebsites.net:443", ["connectionbroker"], {
                 ctx: 'bedefc90-0fdf-4e29-897a-da255aef3bfa'
             });
             // pass a "static" context so all users are in the same room / session . 

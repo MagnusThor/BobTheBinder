@@ -85,9 +85,8 @@
 
 
 
-
-    <script src="//cdn.rawgit.com/XSockets/XSockets.Clients/master/src/XSockets.Clients/XSockets.JavaScript/XSockets.latest.js"></script>
-
+    <script src="js/vendor/XSockets.latest.min.js"></script>
+    
     <script src="//cdn.rawgit.com/MagnusThor/BobTheBinder/master/src/bob.the.binder.js"></script>
 
     <script src="js/models.js"></script>
@@ -107,7 +106,7 @@
                 }
             });
 
-            ws = new XSockets.WebSocket("ws://hushhash.net:80", ["generic"]);
+            ws = new XSockets.WebSocket("wss://rtcplaygrouund.azurewebsites.net:443", ["generic"]);
 
 
 
